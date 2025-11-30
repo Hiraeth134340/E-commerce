@@ -34,7 +34,7 @@
 
         h1, h2, h3, h4, .logo, footer { font-family: 'Playfair Display', serif; }
 
-        /* --- SPARKLE ANIMATION (UPDATED) --- */
+        /* --- SPARKLE ANIMATION --- */
         #glitter-container {
             position: fixed; top: 0; left: 0; width: 100%; height: 100%;
             pointer-events: none; z-index: 9999; overflow: hidden;
@@ -42,10 +42,9 @@
 
         .glitter {
             position: absolute;
-            top: -30px; /* Start slightly above screen */
+            top: -30px; 
             opacity: 0;
             animation: fall linear forwards;
-            /* No background color needed for emoji */
             user-select: none;
         }
 
@@ -301,7 +300,7 @@
             <i class="ph ph-x-logo"></i>
             <i class="ph ph-youtube-logo"></i>
         </div>
-        <div class="copyright">&copy; Beauty Heroes&reg; 2025</div>
+        <div class="copyright">&copy; Nude & Glow&reg; 2025</div>
     </footer>
 
     <!-- MODALS -->
@@ -608,7 +607,8 @@
             if(e.target.classList.contains('modal-overlay')) {
                 e.target.style.display = "none"; 
             }
-            // Close Hamburger Menu
+            
+            // Close Hamburger Menu if clicked outside
             const nav = document.getElementById('navLinks');
             const toggle = document.querySelector('.menu-toggle');
             if(nav.classList.contains('active') && !nav.contains(e.target) && !toggle.contains(e.target)) {
