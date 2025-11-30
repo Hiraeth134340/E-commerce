@@ -1,0 +1,1036 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Nude Beauty Shop - Required Guest Auth</title>
+    <!-- Tailwind CSS CDN - Note: This is required for styling in this environment -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Font: Inter -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@100..900&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --color-nude-light: #F5E5DC; /* Very light beige/pink */
+            --color-nude-dark: #6B4423;  /* Deep brown/taupe */
+            --color-nude-accent: #A87D65; /* Warm mid-brown */
+            --color-cream: #FFFBF7;
+            --color-gold-glow: #FFC000; /* Richer Gold for Intense Glow */
+            --color-gold-shadow: rgba(255, 192, 0, 0.4); 
+        }
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: var(--color-cream);
+            position: relative;
+        }
+        
+        /* --- SOFTER GOLD GLOW EFFECT CLASS --- */
+        .gold-glow {
+            box-shadow: 
+                0 0 8px 3px var(--color-gold-shadow), 
+                0 0 15px 5px rgba(255, 192, 0, 0.15), 
+                0 2px 10px -3px rgba(0, 0, 0, 0.1); 
+            border: 1px solid var(--color-gold-glow); 
+            transition: all 0.4s cubic-bezier(0.25, 0.46, 0.45, 0.94); 
+        }
+        
+        .nude-card {
+            @apply gold-glow; 
+            transition: transform 0.2s, box-shadow 0.4s;
+            position: relative; 
+            z-index: 10;
+            background-color: white; 
+        }
+        .nude-card:hover {
+            transform: translateY(-4px); 
+            box-shadow: 
+                0 0 20px 5px var(--color-gold-shadow), 
+                0 0 30px 8px rgba(255, 192, 0, 0.3), 
+                0 10px 20px -8px rgba(0, 0, 0, 0.25); 
+        }
+        .btn-primary {
+            background-color: var(--color-nude-accent);
+            color: white;
+            transition: background-color 0.2s;
+        }
+        .btn-primary:hover {
+            background-color: var(--color-nude-dark);
+        }
+        .cart-item-container {
+            max-height: 400px;
+            overflow-y: auto;
+        }
+        
+        /* --- ELEGANT HEADER STYLE --- */
+        .elegant-header {
+            font-family: Georgia, 'Times New Roman', Times, serif; 
+            letter-spacing: 0.15em; 
+            text-transform: uppercase;
+            font-weight: 400; 
+        }
+
+        /* --- PRODUCT CARD FADE ANIMATION CSS --- */
+        .product-card-animated {
+            position: relative;
+            overflow: hidden;
+            height: 300px; 
+            cursor: pointer;
+            z-index: 10;
+        }
+        .product-card-animated.featured-height {
+            height: 400px; 
+        }
+        
+        .product-card-image {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            transition: transform 0.6s ease-out;
+        }
+        .product-card-overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(to top, rgba(0, 0, 0, 0.8) 0%, rgba(0, 0, 0, 0.1) 100%);
+            transition: opacity 0.4s ease-out;
+            z-index: 5;
+        }
+        .product-card-info {
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            padding: 1rem;
+            width: 100%;
+            transition: opacity 0.4s ease-out, transform 0.4s ease-out;
+            color: white; 
+            z-index: 10;
+        }
+        .product-card-action {
+            position: absolute;
+            bottom: 1rem;
+            left: 50%;
+            transform: translateX(-50%);
+            z-index: 20; 
+            opacity: 0;
+            transition: opacity 0.4s ease-out;
+        }
+
+        /* Hover Effect (PC and Touch) - Applies to all cards */
+        .product-card-animated:hover .product-card-image {
+            transform: scale(1.1);
+        }
+        .product-card-animated:hover .product-card-overlay {
+            opacity: 0;
+        }
+        .product-card-animated:hover .product-card-info {
+            opacity: 0;
+            transform: translateY(20px);
+        }
+        .product-card-animated:hover .product-card-action {
+            opacity: 1;
+        }
+    </style>
+</head>
+<body class="min-h-screen">
+    
+    <!-- Header / Navigation (Z-index 40) -->
+    <header class="sticky top-0 z-40 p-4 shadow-md" style="background-color: var(--color-nude-light);">
+        <div class="max-w-7xl mx-auto flex justify-between items-center">
+            <!-- ELEGANT HEADER (Responsive Font Size) -->
+            <h1 class="text-3xl sm:text-4xl elegant-header" style="color: var(--color-nude-dark);">Nude Haven</h1>
+            <div class="flex items-center space-x-4">
+                
+                <!-- Profile/Login Container -->
+                <div id="authContainer" class="relative">
+                    <!-- authButton: Will become Sign In button or Profile Icon (Handled by JS) -->
+                    <button id="authButton" class="px-4 py-2 rounded-full font-semibold text-sm btn-primary transition transform hover:scale-105">Sign In</button>
+                    
+                    <!-- Profile Dropdown Menu (Hidden initially) - With Gold Glow -->
+                    <div id="profileMenu" class="absolute right-0 mt-2 w-64 bg-white rounded-xl shadow-lg ring-1 ring-opacity-5 z-20 hidden p-4 gold-glow">
+                        <p class="text-xs font-semibold uppercase mb-2 text-gray-500">Logged In As:</p>
+                        <!-- User ID will be displayed here -->
+                        <p id="menuUserId" class="text-sm font-bold break-all mb-4" style="color: var(--color-nude-dark);"></p>
+                        <button id="menuLogoutButton" class="w-full py-2 rounded-lg font-bold text-sm btn-primary">
+                            Log Out
+                        </button>
+                    </div>
+                </div>
+                
+                <button onclick="toggleCartModal(true)" class="p-2 rounded-full relative transition transform hover:scale-110" style="background-color: var(--color-nude-accent);">
+                    <!-- Cart Icon (Inline SVG for simplicity) -->
+                    <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z"></path></svg>
+                    <span id="cartCount" class="absolute top-0 right-0 inline-flex items-center justify-center px-2 py-1 text-xs font-bold leading-none text-red-100 transform translate-x-1/2 -translate-y-1/2 bg-red-600 rounded-full">0</span>
+                </button>
+            </div>
+        </div>
+        
+        <!-- DEMO MODE ALERT BAR -->
+        <div id="demoModeAlert" class="mt-4 p-2 text-center text-sm font-semibold rounded-lg hidden" style="background-color: #FFECB3; color: var(--color-nude-dark); border: 1px solid var(--color-gold-glow);">
+            ⚠️ **DEMO MODE:** The database connection failed (API Key Error). Cart data will NOT be saved persistently.
+        </div>
+
+    </header>
+    
+    <!-- Main Product Area (Z-index 10) -->
+    <main class="max-w-7xl mx-auto p-4 md:p-8 relative z-10">
+        
+        <!-- Daily Featured Product Section -->
+        <div id="featuredProductContainer">
+            <!-- Featured Product Card rendered by JS -->
+        </div>
+
+        <h2 class="text-3xl sm:text-4xl font-extrabold mb-8 text-center mt-12" style="color: var(--color-nude-dark);">Nude Shade Products</h2>
+        <!-- Product Grid: 1 column on mobile, 2 on small, 3 on large -->
+        <div id="productGrid" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+            <!-- Products will be rendered here by JavaScript. Each product uses nude-card class -->
+        </div>
+    </main>
+
+    <!-- Cart Modal (Slide-out Drawer) (Z-index 50) -->
+    <div id="cartModal" class="fixed inset-0 bg-black bg-opacity-50 z-50 hidden" onclick="toggleCartModal(false)">
+        <!-- Drawer Content - With Gold Glow -->
+        <div class="absolute right-0 top-0 h-full w-full max-w-sm sm:max-w-md p-6 transform transition-transform duration-300 translate-x-full gold-glow" style="background-color: var(--color-cream); overflow-y: auto;" onclick="event.stopPropagation()">
+            
+            <div class="flex justify-between items-center mb-6 pb-3 border-b border-gray-300 sticky top-0 bg-inherit z-10">
+                <h3 class="text-2xl font-bold" style="color: var(--color-nude-dark);">Your Cart</h3>
+                <button onclick="toggleCartModal(false)" class="text-3xl font-bold text-gray-500 hover:text-gray-800">&times;</button>
+            </div>
+
+            <div id="cartItemsContainer" class="cart-item-container space-y-4">
+                <!-- Cart items will be rendered here -->
+            </div>
+
+            <!-- Shipping Address Section -->
+            <form id="shippingForm" onsubmit="event.preventDefault()">
+                <div class="mt-6 pt-4 border-t border-gray-300 space-y-3">
+                    <h4 class="text-lg font-bold" style="color: var(--color-nude-dark);">Shipping Address (Required)</h4>
+                    
+                    <!-- NEW: Name Input -->
+                    <div>
+                        <label for="checkoutName" class="text-sm font-semibold block mb-1" style="color: var(--color-nude-dark);">Full Name (Pangalan)</label>
+                        <input type="text" id="checkoutName" class="w-full p-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-yellow-400 focus:border-yellow-500" placeholder="Juan Dela Cruz" style="border-color: var(--color-nude-accent);" required>
+                    </div>
+                    
+                    <!-- NEW: Contact Number Input -->
+                    <div>
+                        <label for="checkoutContact" class="text-sm font-semibold block mb-1" style="color: var(--color-nude-dark);">Contact Number (Numero)</label>
+                        <input type="tel" id="checkoutContact" class="w-full p-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-yellow-400 focus:border-yellow-500" placeholder="e.g., 09XXXXXXXXX" style="border-color: var(--color-nude-accent);" required>
+                    </div>
+                    
+                    <div>
+                        <label for="addressLine1" class="text-sm font-semibold block mb-1" style="color: var(--color-nude-dark);">Address Line 1</label>
+                        <input type="text" id="addressLine1" class="w-full p-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-yellow-400 focus:border-yellow-500" placeholder="House/Bldg No. and Street" style="border-color: var(--color-nude-accent);" required>
+                    </div>
+                    
+                    <div class="flex space-x-3">
+                        <div class="w-1/2">
+                            <label for="city" class="text-sm font-semibold block mb-1" style="color: var(--color-nude-dark);">City/Province</label>
+                            <input type="text" id="city" class="w-full p-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-yellow-400 focus:border-yellow-500" placeholder="Manila, Cebu, etc." style="border-color: var(--color-nude-accent);" required>
+                        </div>
+                        <div class="w-1/2">
+                            <label for="zipCode" class="text-sm font-semibold block mb-1" style="color: var(--color-nude-dark);">Zip Code</label>
+                            <input type="text" id="zipCode" class="w-full p-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-yellow-400 focus:border-yellow-500" placeholder="e.g., 1000" style="border-color: var(--color-nude-accent);" required>
+                        </div>
+                    </div>
+                </div>
+            </form>
+
+            <!-- Payment and Voucher Section -->
+            <div class="mt-4 pt-4 border-t border-gray-300 space-y-3">
+                <h4 class="text-lg font-bold" style="color: var(--color-nude-dark);">Payment & Discount</h4>
+                
+                <!-- Payment Method Selection -->
+                <div>
+                    <label for="paymentMethod" class="text-sm font-semibold block mb-1" style="color: var(--color-nude-dark);">Payment Method</label>
+                    <select id="paymentMethod" class="w-full p-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-yellow-400 focus:border-yellow-500" style="border-color: var(--color-nude-accent);">
+                        <option value="cod">Cash on Delivery (COD)</option>
+                        <option value="gcash">GCash</option>
+                    </select>
+                </div>
+
+                <!-- Voucher/Discount Input -->
+                <div>
+                    <label for="voucherCode" class="text-sm font-semibold mb-1 block" style="color: var(--color-nude-dark);">Voucher or Discount Code</label>
+                    <div class="flex space-x-2">
+                        <input type="text" id="voucherCode" class="flex-grow p-2 border border-gray-300 rounded-lg text-sm uppercase focus:ring-2 focus:ring-yellow-400 focus:border-yellow-500" placeholder="Enter code (e.g., NUDE10)" style="border-color: var(--color-nude-accent);">
+                        <button onclick="applyVoucher()" class="px-4 py-2 rounded-lg font-bold text-sm btn-primary">Apply</button>
+                    </div>
+                    <p id="voucherFeedback" class="text-xs mt-1"></p>
+                </div>
+            </div>
+
+            <!-- Updated Totals Section -->
+            <div class="mt-6 pt-4 border-t border-gray-300 sticky bottom-0 bg-inherit z-10">
+                <div class="flex justify-between items-center text-md mb-1" style="color: var(--color-nude-dark);">
+                    <span>Subtotal:</span>
+                    <span id="cartSubtotal">₱0.00</span>
+                </div>
+                <div class="flex justify-between items-center text-md mb-1 text-red-600 font-medium">
+                    <span>Discount:</span>
+                    <span id="cartDiscount">- ₱0.00</span>
+                </div>
+                <div class="flex justify-between items-center text-xl font-extrabold mb-4" style="color: var(--color-nude-dark);">
+                    <span>Final Total:</span>
+                    <span id="cartFinalTotal">₱0.00</span>
+                </div>
+                <button id="checkoutButton" onclick="handleCheckout()" class="w-full py-3 rounded-lg font-bold btn-primary disabled:opacity-50" disabled>
+                    Check Out
+                </button>
+                <p id="checkoutMessage" class="mt-3 text-sm text-center text-green-600 font-medium hidden">Thank you! Your order is successful.</p>
+                <!-- Message for login requirement -->
+                <p id="loginRequiredMessage" class="mt-3 text-sm text-center text-red-500 font-medium hidden">You must sign in (using the Sign In button) before checking out.</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Image Zoom Modal (Lightbox) (Z-index 50) -->
+    <div id="imageZoomModal" class="fixed inset-0 bg-black bg-opacity-80 z-50 hidden flex items-center justify-center" onclick="this.classList.add('hidden')">
+        <div class="max-w-full sm:max-w-4xl w-full h-auto max-h-[95vh] p-4 relative" onclick="event.stopPropagation()">
+            <!-- Close Button -->
+            <button onclick="document.getElementById('imageZoomModal').classList.add('hidden')" class="absolute top-2 right-2 text-white text-3xl font-bold p-2 leading-none hover:text-gray-300 transition">&times;</button>
+            
+            <!-- Image Container - With Gold Glow -->
+            <div class="bg-white p-4 rounded-xl shadow-2xl flex flex-col items-center gold-glow">
+                <h4 id="zoomTitle" class="text-xl font-bold mb-3" style="color: var(--color-nude-dark);"></h4>
+                <!-- Added cursor-pointer and onclick to close the modal when the image is clicked -->
+                <img id="zoomedImage" 
+                     src="" 
+                     alt="Product Zoom" 
+                     class="max-w-full max-h-[80vh] object-contain rounded-lg cursor-pointer"
+                     onclick="document.getElementById('imageZoomModal').classList.add('hidden')"
+                >
+            </div>
+        </div>
+    </div>
+
+    <!-- General Alert Modal (Replaces alert()) (Z-index 50) -->
+    <div id="alertModal" class="fixed inset-0 bg-black bg-opacity-50 z-50 hidden flex items-center justify-center">
+        <!-- Modal Content - With Gold Glow -->
+        <div class="bg-white p-6 rounded-xl shadow-2xl max-w-sm w-full gold-glow">
+            <h4 id="alertTitle" class="text-xl font-bold mb-3" style="color: var(--color-nude-dark);">Attention</h4>
+            <p id="alertBody" class="text-gray-700 mb-4"></p>
+            <button onclick="document.getElementById('alertModal').classList.add('hidden')" class="w-full py-2 rounded-lg font-bold btn-primary">OK</button>
+        </div>
+    </div>
+
+    <!-- NEW: Sign-In Prompt Modal (Z-index 60) -->
+    <div id="signInPromptModal" class="fixed inset-0 bg-black bg-opacity-70 z-50 hidden flex items-center justify-center">
+        <!-- Modal Content - With Gold Glow -->
+        <div class="bg-white p-6 rounded-xl shadow-2xl max-w-sm w-full gold-glow text-center">
+            <h4 class="text-2xl font-bold mb-4" style="color: var(--color-nude-dark);">Login Option</h4>
+            
+            <!-- Custom Prompt Message -->
+            <p class="text-lg font-medium text-gray-800 mb-6 p-4 rounded-lg" style="background-color: var(--color-nude-light);">
+                "No need to create an account! You can use a **Guest Account** for less hassle shopping. Enjoy Shopping!"
+            </p>
+            
+            <div class="space-y-3">
+                <!-- Primary Action Button (Login) -->
+                <button onclick="handleGuestSignIn()" class="w-full py-3 rounded-lg font-bold btn-primary transition transform hover:scale-105">
+                    Log In / Continue as Guest
+                </button>
+                
+                <!-- Secondary Action Button (Cancel/Back) -->
+                <button onclick="document.getElementById('signInPromptModal').classList.add('hidden')" class="w-full py-2 rounded-lg font-semibold text-sm transition text-gray-600 hover:text-gray-800 hover:bg-gray-100">
+                    Cancel / Back to Browsing
+                </button>
+            </div>
+        </div>
+    </div>
+
+<script type="module">
+    // Firebase modules
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+    import { getAuth, onAuthStateChanged, signOut, signInAnonymously, signInWithCustomToken } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+    import { getFirestore, doc, setDoc, onSnapshot, setLogLevel } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+
+    // Set log level to debug for firestore
+    setLogLevel('Debug');
+
+    // --- GLOBAL FIREBASE VARIABLES (Mandatory) ---
+    const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
+    // Removed dependency on __initial_auth_token since we are no longer auto-logging in
+
+    let firebaseConfig = {};
+    let isDemoMode = false; // Flag to check if we failed to initialize Firebase
+
+    // --- ROBUST CONFIGURATION PARSING AND FALLBACK ---
+    try {
+        if (typeof __firebase_config !== 'undefined' && __firebase_config) {
+            firebaseConfig = JSON.parse(__firebase_config);
+        }
+    } catch (e) {
+        console.error("Failed to parse __firebase_config. Proceeding with fallback config.", e);
+    }
+
+    // Fallback: If config is invalid or missing critical fields (like projectId), use a complete mock object
+    if (!firebaseConfig.projectId) {
+        console.warn("Using placeholder Firebase configuration. Preparing for Demo Mode.");
+        firebaseConfig = { 
+            apiKey: "mock-api-key",
+            authDomain: "mock-auth-domain.firebaseapp.com",
+            projectId: "mock-project-id", 
+            storageBucket: "mock-bucket.appspot.com",
+            messagingSenderId: "mock-sender-id-12345",
+            appId: "1:1234567890:web:abcdef"
+        };
+    }
+    // --- END ROBUST CONFIGURATION FIX ---
+
+    // Global App State
+    let db = null;
+    let auth = null;
+    let currentUserId = null; // This checks if the user is logged in
+    let cartData = {}; // {productId: {name, price, quantity}}
+    let currentDiscount = { type: 'none', amount: 0, code: '' }; 
+    let unsubscribeCart = null;
+
+    // SVG for Profile Icon (Guest)
+    const PROFILE_ICON_SVG = `<svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"></path></svg>`;
+
+    // UI elements
+    const authButtonEl = document.getElementById('authButton');
+    const authContainerEl = document.getElementById('authContainer');
+    const profileMenuEl = document.getElementById('profileMenu');
+    const menuUserIdEl = document.getElementById('menuUserId');
+    const menuLogoutButtonEl = document.getElementById('menuLogoutButton');
+    const signInPromptModalEl = document.getElementById('signInPromptModal');
+    const demoModeAlertEl = document.getElementById('demoModeAlert'); // New element
+    
+    const featuredProductContainerEl = document.getElementById('featuredProductContainer');
+    const productGridEl = document.getElementById('productGrid');
+    const cartCountEl = document.getElementById('cartCount');
+    const cartModalEl = document.getElementById('cartModal');
+    const checkoutButtonEl = document.getElementById('checkoutButton');
+    const loginRequiredMessageEl = document.getElementById('loginRequiredMessage');
+    const checkoutMessageEl = document.getElementById('checkoutMessage');
+    
+    // Cart Totals and Inputs
+    const cartSubtotalEl = document.getElementById('cartSubtotal');
+    const cartDiscountEl = document.getElementById('cartDiscount');
+    const cartFinalTotalEl = document.getElementById('cartFinalTotal');
+    const cartItemsContainerEl = document.getElementById('cartItemsContainer');
+    const voucherCodeEl = document.getElementById('voucherCode');
+    const voucherFeedbackEl = document.getElementById('voucherFeedback');
+    
+    // Mock Data
+    const products = [
+        { id: 'p001', name: 'Nude Matte Lipstick', price: 799.00, desc: 'A shine-free (matte) lip color with a peach-brown shade. Perfect for daily use.', image: 'https://placehold.co/400x300/A87D65/FFF?text=Matte+Lipstick' },
+        { id: 'p002', name: 'Earth Tones Eyeshadow Palette', price: 1550.00, desc: '9 eyeshadow shades ranging from light beige, taupe, to deep chocolate brown. Easy to blend.', image: 'https://placehold.co/500x700/6B4423/FFFBF7?text=FEATURED+ITEM+EYESHADOW' }, 
+        { id: 'p003', name: 'Warm Peach Blush', price: 650.00, desc: 'Cheek color that provides a natural and warm peach shade. Gives a fresh look.', image: 'https://placehold.co/400x300/D4B8A3/6B4423?text=Peach+Blush' }, 
+        { id: 'p004', name: 'Nude Brown Lip Liner', price: 450.00, desc: 'A creamy lip liner that helps to define the lip shape. Long-lasting formula.', image: 'https://placehold.co/400x300/D4B8A3/6B4423?text=Lip+Liner' },
+        { id: 'p005', name: 'Base Concealer', price: 890.00, desc: 'Full coverage concealer with a second-skin color. Hides blemishes and dark circles.', image: 'https://placehold.co/400x300/E8D2C1/6B4423?text=Concealer' },
+        { id: 'p006', name: 'Glow Highlighter', price: 920.00, desc: 'A highlighter with a champagne gold finish. Provides a natural glow.', image: 'https://placehold.co/400x300/FFFAF0/A87D65?text=Highlighter' },
+    ];
+    
+    // --- UTILITY FUNCTIONS ---
+
+    /**
+     * Utility function to show a custom alert modal.
+     */
+    function showAlertModal(title, body) {
+        document.getElementById('alertTitle').textContent = title;
+        document.getElementById('alertBody').textContent = body;
+        document.getElementById('alertModal').classList.remove('hidden');
+    }
+    
+    /**
+     * Toggles the profile dropdown menu.
+     */
+    function toggleProfileMenu(show) {
+        if (typeof show === 'boolean') {
+            profileMenuEl.classList.toggle('hidden', !show);
+        } else {
+            profileMenuEl.classList.toggle('hidden');
+        }
+    }
+    
+    /**
+     * Shows the image zoom modal (Lightbox).
+     */
+    window.showImageZoom = (imageUrl, title) => {
+        document.getElementById('zoomTitle').textContent = title;
+        document.getElementById('zoomedImage').src = imageUrl;
+        document.getElementById('imageZoomModal').classList.remove('hidden');
+    };
+
+    /**
+     * Step 1: Shows the sign-in prompt modal when the Sign In button is clicked.
+     */
+    function showSignInPrompt() {
+        signInPromptModalEl.classList.remove('hidden');
+    }
+
+    /**
+     * Step 2: Handles the actual anonymous sign-in process. (Triggered by button inside the modal)
+     */
+    window.handleGuestSignIn = async () => {
+        signInPromptModalEl.classList.add('hidden'); // Close the prompt modal first
+        
+        // --- DEMO MODE SIGN-IN ---
+        if (isDemoMode) {
+             // Simulate a sign-in with a temporary, random ID if in Demo Mode
+            currentUserId = `LOCAL_GUEST_${crypto.randomUUID()}`;
+            auth = { currentUser: { uid: currentUserId }, signOut: () => {} }; // Mock auth object
+            console.warn("Running in Demo Mode. Mock user ID created:", currentUserId);
+            
+            // Manually trigger the user state logic for the UI to update
+            updateAuthUI(auth.currentUser);
+            
+            showAlertModal('Welcome!', 'You are running in DEMO MODE. Your cart will NOT be saved.');
+            return;
+        }
+        // --- END DEMO MODE SIGN-IN ---
+
+        try {
+            // If the user has explicitly chosen to sign in, use anonymous sign-in
+            const userCredential = await signInAnonymously(auth); 
+            console.log("Anonymous Sign In Successful:", userCredential.user.uid);
+            showAlertModal('Welcome!', 'You have successfully signed in as Guest. Your cart is saved persistently.');
+        } catch (e) {
+            console.error("Anonymous Sign In Failed:", e);
+            showAlertModal('Error', 'Could not sign in as guest. Please try again. Check console for Firebase errors.');
+        }
+    };
+    
+    /**
+     * Updates the UI elements based on the current user state (logged in or out).
+     */
+    function updateAuthUI(user) {
+        document.removeEventListener('click', () => toggleProfileMenu(false));
+        
+        if (user) {
+            currentUserId = user.uid;
+            
+            // --- LOGGED IN STATE ---
+            const userIdDisplay = isDemoMode ? "LOCAL DEMO USER" : user.uid.substring(0, 8) + '...';
+            menuUserIdEl.textContent = userIdDisplay; 
+            
+            // Profile Icon display
+            authButtonEl.innerHTML = PROFILE_ICON_SVG + `<span class="ml-2 hidden sm:inline">${isDemoMode ? "Demo" : "Guest"}</span>`;
+            authButtonEl.title = `Logged in as: ${userIdDisplay}`;
+            authButtonEl.className = 'p-2 rounded-full font-semibold btn-primary w-24 h-10 flex items-center justify-center transition transform hover:scale-105'; 
+
+            authButtonEl.onclick = (e) => {
+                e.stopPropagation();
+                toggleProfileMenu();
+            };
+
+            menuLogoutButtonEl.onclick = async () => {
+                try {
+                    toggleProfileMenu(false);
+                    if (!isDemoMode) {
+                         await signOut(auth);
+                    }
+                    // Manually clear state for demo mode
+                    currentUserId = null;
+                    updateAuthUI(null);
+                    
+                    showAlertModal('Signed Out', 'You have successfully logged out. Press "Sign In" to return to shopping.');
+                } catch(e) {
+                    console.error("Logout Error:", e);
+                    showAlertModal('Logout Failed', 'Could not log out. Please try again.');
+                }
+            };
+            
+            setTimeout(() => {
+                document.addEventListener('click', () => toggleProfileMenu(false), false);
+                authContainerEl.addEventListener('click', (e) => e.stopPropagation(), false); 
+            }, 0);
+            
+            if (!isDemoMode) {
+                subscribeToCart();
+            } else {
+                console.warn("Skipping cart subscription due to Demo Mode.");
+            }
+            
+        } else {
+            // --- LOGGED OUT STATE ---
+            currentUserId = null;
+            
+            // Sign In Button
+            authButtonEl.innerHTML = 'Sign In';
+            authButtonEl.title = 'Press to Sign In as Guest';
+            authButtonEl.className = 'px-4 py-2 rounded-full font-semibold text-sm btn-primary transition transform hover:scale-105'; 
+            
+            // This shows the prompt modal
+            authButtonEl.onclick = showSignInPrompt;
+            
+            toggleProfileMenu(false); 
+            
+            if (unsubscribeCart) {
+                unsubscribeCart();
+                unsubscribeCart = null;
+            }
+            cartData = {}; 
+            currentDiscount = { type: 'none', amount: 0, code: '' };
+            renderCart(); 
+        }
+        updateCheckoutButtonState();
+    }
+
+
+    /**
+     * Initializes Firebase services and sets up the initial authentication.
+     */
+    async function initialAuthAndSetup() {
+        
+        try {
+            // --- CRITICAL: Initialize Firebase App ---
+            const app = initializeApp(firebaseConfig);
+            db = getFirestore(app);
+            auth = getAuth(app);
+            
+            console.log("Firebase App Initialized successfully. Awaiting user sign-in.");
+
+            // --- REMOVED: Automatic sign-in logic (signInWithCustomToken and signInAnonymously) ---
+            // The app now waits for the user to explicitly click "Sign In".
+
+            // Listener for Auth State Changes (Handles UI updates when user logs in/out)
+            onAuthStateChanged(auth, updateAuthUI);
+
+        } catch (error) {
+            // --- DEMO MODE ACTIVATED ---
+            console.error("Fatal Error during Firebase initialization (API Key or Config issue). Switching to Demo Mode:", error);
+            
+            // Set global state to null and activate demo flag
+            db = null;
+            auth = null;
+            isDemoMode = true; 
+            
+            // Show persistent alert bar
+            demoModeAlertEl.classList.remove('hidden');
+
+            // Force a logged-out state, relying on handleGuestSignIn to mock a login
+            updateAuthUI(null); 
+            
+            // Show alert modal for immediate feedback
+            showAlertModal('Demo Mode Activated', `Database connection failed due to configuration issues: ${error.message}. Cart will not save.`);
+        }
+        
+        // Render products regardless of connectivity
+        renderFeaturedProduct(); 
+        renderProducts(); 
+    }
+    
+    // Renders the daily featured product
+    function renderFeaturedProduct() {
+        const featuredProduct = products.find(p => p.id === 'p002');
+        if (!featuredProduct) return;
+        
+        featuredProductContainerEl.innerHTML = `
+            <div class="mx-auto max-w-sm sm:max-w-lg my-10 relative">
+                <!-- Highlight Banner -->
+                <span class="absolute -top-3 left-1/2 transform -translate-x-1/2 px-4 py-1 text-xs font-bold uppercase tracking-wider rounded-full z-20" style="background-color: var(--color-gold-glow); color: var(--color-nude-dark); box-shadow: 0 0 10px 2px var(--color-gold-shadow);">
+                    ⭐ DAILY FEATURE!
+                </span>
+                
+                <!-- Product Card (Taller height for featured) -->
+                <div class="bg-white rounded-xl nude-card p-0 product-card-animated featured-height">
+                    
+                    <!-- Image (Base Layer) -->
+                    <img 
+                        src="${featuredProduct.image}" 
+                        alt="${featuredProduct.name}" 
+                        class="product-card-image" 
+                        onclick="showImageZoom('${featuredProduct.image}', 'Featured: ${featuredProduct.name}')" 
+                        onerror="this.onerror=null; this.src='https://placehold.co/500x700/6B4423/FFFBF7?text=FEATURED+ITEM';" 
+                    >
+
+                    <!-- Overlay (For text readability) -->
+                    <div class="product-card-overlay"></div>
+                    
+                    <!-- Product Info (Initial View) - Bigger text for featured -->
+                    <div class="product-card-info">
+                        <h3 class="text-2xl font-extrabold mb-1">${featuredProduct.name}</h3>
+                        <p class="text-xl font-medium mb-1" style="color: var(--color-nude-light);">₱${featuredProduct.price.toFixed(2)}</p>
+                        <p class="text-gray-300 text-sm">${featuredProduct.desc}</p>
+                    </div>
+
+                    <!-- Add to Cart Button (Hover View) -->
+                    <div class="product-card-action">
+                        <!-- Strict check is done inside the function -->
+                        <button onclick="addToCart('${featuredProduct.id}')" class="px-10 py-3 rounded-full font-bold btn-primary text-lg transition transform hover:scale-105">
+                            Shop Now!
+                        </button>
+                    </div>
+                </div>
+            </div>
+        `;
+    }
+
+    // Renders the list of products
+    function renderProducts() {
+        const standardProducts = products.filter(p => p.id !== 'p002');
+
+        productGridEl.innerHTML = standardProducts.map(p => `
+            <div class="bg-white rounded-xl nude-card p-0 product-card-animated">
+                
+                <!-- Image (Base Layer) -->
+                <img 
+                    src="${p.image}" 
+                    alt="${p.name}" 
+                    class="product-card-image" 
+                    onclick="showImageZoom('${p.image}', '${p.name}')"
+                    onerror="this.onerror=null; this.src='https://placehold.co/400x300/F5E5DC/6B4423?text=Product';" 
+                >
+
+                <!-- Overlay (For text readability) -->
+                <div class="product-card-overlay"></div>
+                
+                <!-- Product Info (Initial View) -->
+                <div class="product-card-info">
+                    <h3 class="text-xl font-bold mb-1">${p.name}</h3>
+                    <p class="text-sm font-medium mb-1" style="color: var(--color-nude-light);">₱${p.price.toFixed(2)}</p>
+                    <p class="text-gray-300 text-xs">${p.desc}</p>
+                </div>
+
+                <!-- Add to Cart Button (Hover View) -->
+                <div class="product-card-action">
+                    <!-- Strict check is done inside the function -->
+                    <button onclick="addToCart('${p.id}')" class="px-8 py-2 rounded-full font-semibold btn-primary transition transform hover:scale-105">
+                        Add to Cart
+                    </button>
+                </div>
+                
+            </div>
+        `).join('');
+    }
+
+    /**
+     * Collects the cart document path for the current user.
+     * Uses private data path.
+     * @returns {string} The Firestore document path.
+     */
+    function getCartDocPath() {
+        if (!currentUserId || isDemoMode) return null;
+        // Uses private data path
+        return `artifacts/${appId}/users/${currentUserId}/carts/current_cart`;
+    }
+
+    /**
+     * Adds a product to the cart and updates Firestore.
+     * @param {string} productId - ID of the product to add.
+     */
+    window.addToCart = async (productId) => {
+        // --- MANDATORY CHECK: Ensure user ID exists before adding to cart ---
+        if (!currentUserId) {
+            showAlertModal(
+                'Sign In Required', 
+                'You cannot add this item to the cart until you press the "Sign In" button.'
+            );
+            return; // EXIT if no user ID
+        }
+        // --- END MANDATORY CHECK ---
+
+        const product = products.find(p => p.id === productId);
+        if (!product) return;
+
+        // Update local cartData
+        if (cartData[productId]) {
+            cartData[productId].quantity += 1;
+        } else {
+            cartData[productId] = {
+                id: product.id,
+                name: product.name,
+                price: product.price,
+                quantity: 1,
+            };
+        }
+        
+        // Render locally immediately
+        renderCart();
+
+        if (db && !isDemoMode) {
+            const cartDocRef = doc(db, getCartDocPath());
+            try {
+                // Serialize cartData before saving
+                const serializedCart = JSON.stringify(cartData);
+                await setDoc(cartDocRef, { itemsJson: serializedCart, lastUpdated: new Date() }, { merge: true });
+                
+            } catch (e) {
+                console.error("Error updating cart:", e);
+                showAlertModal('Error', 'Could not save cart to database. See console for details.');
+            }
+        } else {
+             // If db is null (Demo Mode), the item is added to the local cart only
+             console.warn("In Demo Mode. Item added to local cart only.");
+        }
+    };
+    
+    /**
+     * Applies a discount code to the cart.
+     */
+    window.applyVoucher = () => {
+        const code = voucherCodeEl.value.trim().toUpperCase();
+        currentDiscount = { type: 'none', amount: 0, code: '' }; // Reset
+
+        if (code === 'NUDE10') {
+            currentDiscount = { type: 'percent', amount: 10, code: code };
+            voucherFeedbackEl.className = 'text-xs mt-1 text-green-600 font-semibold';
+            voucherFeedbackEl.textContent = 'Voucher activated! 10% discount applied.';
+        } else if (code === 'FREE50') {
+            currentDiscount = { type: 'flat', amount: 50, code: code };
+            voucherFeedbackEl.className = 'text-xs mt-1 text-green-600 font-semibold';
+            voucherFeedbackEl.textContent = 'Voucher activated! ₱50 flat discount applied.';
+        } else if (code === '') {
+            voucherFeedbackEl.textContent = '';
+        } else {
+            voucherFeedbackEl.className = 'text-xs mt-1 text-red-600 font-semibold';
+            voucherFeedbackEl.textContent = 'Invalid voucher code.';
+        }
+
+        renderCart(); 
+    };
+
+    /**
+     * Renders the current cart content and calculates totals.
+     */
+    function renderCart() {
+        let subtotal = 0;
+        const items = Object.values(cartData);
+
+        items.forEach(item => {
+            subtotal += item.price * item.quantity;
+        });
+
+        let discountAmount = 0;
+        if (currentDiscount.type === 'percent') {
+            discountAmount = subtotal * (currentDiscount.amount / 100);
+        }
+        else if (currentDiscount.type === 'flat') {
+            discountAmount = currentDiscount.amount;
+        }
+        discountAmount = Math.min(discountAmount, subtotal);
+        
+        const finalTotal = subtotal - discountAmount;
+
+        // 3. Update UI
+        if (items.length === 0) {
+            cartItemsContainerEl.innerHTML = '<p class="text-center text-gray-500 italic">Your cart is empty.</p>';
+            cartCountEl.textContent = '0';
+            
+            cartSubtotalEl.textContent = '₱0.00';
+            cartDiscountEl.textContent = '- ₱0.00';
+            cartFinalTotalEl.textContent = '₱0.00';
+            
+        } else {
+            cartItemsContainerEl.innerHTML = items.map(item => {
+                const subtotalItem = item.price * item.quantity;
+
+                return `
+                    <div class="flex justify-between items-center p-3 rounded-lg border border-gray-200" style="background-color: var(--color-nude-light);">
+                        <div class="flex-grow">
+                            <p class="font-semibold" style="color: var(--color-nude-dark);">${item.name}</p>
+                            <p class="text-sm text-gray-700">₱${item.price.toFixed(2)} x ${item.quantity}</p>
+                        </div>
+                        <span class="font-bold text-lg" style="color: var(--color-nude-accent);">₱${subtotalItem.toFixed(2)}</span>
+                    </div>
+                `;
+            }).join('');
+
+            cartCountEl.textContent = items.reduce((sum, item) => sum + item.quantity, 0);
+
+            cartSubtotalEl.textContent = `₱${subtotal.toFixed(2)}`;
+            cartDiscountEl.textContent = `- ₱${discountAmount.toFixed(2)}`;
+            cartFinalTotalEl.textContent = `₱${finalTotal.toFixed(2)}`;
+        }
+        
+        updateCheckoutButtonState();
+    }
+
+
+    /**
+     * Sets up a real-time listener for the user's cart in Firestore.
+     */
+    function subscribeToCart() {
+        if (unsubscribeCart) {
+            unsubscribeCart();
+            unsubscribeCart = null;
+        }
+
+        // Only proceed if db and currentUserId are available and NOT in Demo Mode
+        if (!db || !currentUserId || isDemoMode) return;
+        
+        const cartDocRef = doc(db, getCartDocPath());
+
+        unsubscribeCart = onSnapshot(cartDocRef, (docSnap) => {
+            if (docSnap.exists() && docSnap.data().itemsJson) {
+                try {
+                    // Deserialize cartData when loaded
+                    cartData = JSON.parse(docSnap.data().itemsJson);
+                } catch (e) {
+                    console.error("Error parsing cart data:", e);
+                    cartData = {};
+                }
+            } else {
+                cartData = {};
+            }
+            renderCart();
+        }, (error) => {
+            console.error("Error in real-time cart update (Subscription Failed):", error);
+        });
+    }
+
+    /**
+     * Updates the state and message of the checkout button.
+     */
+    function updateCheckoutButtonState() {
+        const isUserLoggedIn = !!currentUserId;
+        const cartHasItems = Object.keys(cartData).length > 0;
+
+        if (isUserLoggedIn && cartHasItems) {
+            checkoutButtonEl.disabled = false;
+            loginRequiredMessageEl.classList.add('hidden');
+        } else {
+            checkoutButtonEl.disabled = true;
+            if (!isUserLoggedIn) {
+                // Only show login required message if there are items, otherwise it's just empty cart.
+                if (cartHasItems) {
+                   loginRequiredMessageEl.classList.remove('hidden');
+                } else {
+                    loginRequiredMessageEl.classList.add('hidden');
+                }
+            } else {
+                loginRequiredMessageEl.classList.add('hidden');
+            }
+        }
+        checkoutMessageEl.classList.add('hidden');
+    }
+
+    /**
+     * Handles the Checkout process, including address validation.
+     */
+    window.handleCheckout = () => {
+        if (!currentUserId) {
+            showAlertModal('Sign In Required', 'You must sign in using the Sign In button before checking out.');
+            return;
+        }
+        if (Object.keys(cartData).length === 0) {
+            showAlertModal('Cart is Empty', 'Your cart is empty and cannot be checked out.');
+            return;
+        }
+        
+        // --- Get NEW Required Fields ---
+        const checkoutName = document.getElementById('checkoutName').value.trim();
+        const checkoutContact = document.getElementById('checkoutContact').value.trim();
+        
+        // --- 1. New Validation Checks (Name and Contact) ---
+        if (!checkoutName) {
+            showAlertModal('Missing Information', 'Please provide your Full Name (Pangalan) to proceed with checkout.');
+            return;
+        }
+        if (!checkoutContact) {
+            showAlertModal('Missing Information', 'Please provide your Contact Number (Numero) to proceed with checkout.');
+            return;
+        }
+
+        // --- 2. Address and Payment Validation ---
+        const addressLine1 = document.getElementById('addressLine1').value.trim();
+        const city = document.getElementById('city').value.trim();
+        const zipCode = document.getElementById('zipCode').value.trim();
+        const paymentMethod = document.getElementById('paymentMethod').value;
+
+        if (!addressLine1 || !city || !zipCode) {
+            showAlertModal('Missing Information', 'Please fill out all Shipping Address fields (Address, City, Zip Code) to proceed with checkout.');
+            return;
+        }
+        if (!paymentMethod || paymentMethod === "") { 
+            showAlertModal('Missing Information', 'Please select a Payment Method.');
+            return;
+        }
+
+        const finalTotalText = cartFinalTotalEl.textContent;
+        const finalTotal = parseFloat(finalTotalText.replace('₱', '').replace(',', ''));
+        
+        // Update success message with new fields
+        const finalMessage = `Your order is successful! Final Total: ${finalTotalText}. Payment Method: ${paymentMethod.toUpperCase()}. Customer: ${checkoutName}. Contact: ${checkoutContact}. Order will be shipped to: ${addressLine1}, ${city}, ${zipCode}.`;
+        
+        // Checkout Logic: Reset the cart in Firestore or locally
+        if (db && !isDemoMode) {
+            try {
+                const cartDocRef = doc(db, getCartDocPath());
+                
+                // Clear the cart and store checkout details
+                setDoc(cartDocRef, { 
+                    itemsJson: JSON.stringify({}), 
+                    lastCheckedOut: new Date(),
+                    lastOrderTotal: finalTotal,
+                    lastPaymentMethod: paymentMethod,
+                    lastVoucher: currentDiscount.code,
+                    lastCustomerName: checkoutName, // NEW
+                    lastCustomerContact: checkoutContact, // NEW
+                    shippingAddress: {
+                        line1: addressLine1,
+                        city: city,
+                        zipCode: zipCode
+                    }
+                });
+
+                // Show confirmation message
+                checkoutMessageEl.classList.remove('hidden');
+                loginRequiredMessageEl.classList.add('hidden');
+                
+                showAlertModal('Successful Checkout', finalMessage);
+
+            } catch (e) {
+                console.error("Error in Checkout:", e);
+                showAlertModal('Error', 'There was an issue processing your checkout. Please try again.');
+            }
+        } else {
+            // Success state for demo mode
+            showAlertModal('Successful Checkout (Demo Mode)', `${finalMessage} NOTE: This transaction was NOT saved to the database. The cart has been cleared locally.`);
+            // Manually clear the local cart data
+            cartData = {}; 
+            renderCart();
+        }
+        
+        // Reset local state (discount/voucher/address/NEW FIELDS) regardless of db status
+        currentDiscount = { type: 'none', amount: 0, code: '' };
+        document.getElementById('voucherCode').value = '';
+        document.getElementById('voucherFeedback').textContent = '';
+        document.getElementById('checkoutName').value = ''; // NEW
+        document.getElementById('checkoutContact').value = ''; // NEW
+        document.getElementById('addressLine1').value = '';
+        document.getElementById('city').value = '';
+        document.getElementById('zipCode').value = '';
+        
+        // Close the modal after 3 seconds
+        setTimeout(() => {
+            checkoutMessageEl.classList.add('hidden');
+            toggleCartModal(false);
+        }, 3000);
+    };
+
+    /**
+     * Toggles the display of the cart modal.
+     */
+    window.toggleCartModal = (show) => {
+        const cartContent = cartModalEl.querySelector(':scope > div'); 
+
+        if (show) {
+            cartModalEl.classList.remove('hidden');
+            setTimeout(() => {
+                cartContent.classList.remove('translate-x-full');
+            }, 10);
+        } else {
+            cartContent.classList.add('translate-x-full');
+            setTimeout(() => {
+                cartModalEl.classList.add('hidden');
+            }, 300); 
+        }
+        updateCheckoutButtonState();
+    };
+
+
+    // Start application setup
+    window.onload = initialAuthAndSetup;
+
+</script>
+</body>
+</html>
+
